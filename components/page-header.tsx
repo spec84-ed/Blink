@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Bell, ScanLine } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export function PageHeader({
   title,
@@ -23,6 +24,7 @@ export function PageHeader({
         <button className="flex h-11 w-11 items-center justify-center rounded-2xl border border-ink/10 bg-white text-ink/70" aria-label="Notifications">
           <Bell className="h-5 w-5" />
         </button>
+        <ThemeToggle />
       </div>
     </header>
   );

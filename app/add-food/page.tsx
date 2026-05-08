@@ -1,11 +1,21 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Apple, Beef, Camera, ChefHat, Clock3, Copy, Egg, PackagePlus, Search, ScanLine, Wheat } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Apple, Beef, Camera, ChefHat, Clock3, Copy, Egg, PackagePlus, Search, ScanLine, X, Wheat } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { FoodSearchCard } from "@/components/food-search-card";
 import { PageHeader } from "@/components/page-header";
 import { mealTypes, type Food, type MealType, useNutrivueStore } from "@/lib/app-store";
+
+type BarcodeDetectorConstructor = new (options?: { formats?: string[] }) => {
+  detect: (source: HTMLVideoElement) => Promise<Array<{ rawValue: string }>>;
+};
+
+declare global {
+  interface Window {
+    BarcodeDetector?: BarcodeDetectorConstructor;
+  }
+}
 
 const quickActions = [
   { label: "Barcode", detail: "Open Food Facts first", icon: ScanLine },
@@ -20,6 +30,10 @@ export default function AddFoodPage() {
   const [query, setQuery] = useState("");
   const [barcode, setBarcode] = useState("");
   const [barcodeStatus, setBarcodeStatus] = useState("");
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [scannerStatus, setScannerStatus] = useState("");
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const [customFood, setCustomFood] = useState({
     name: "",
     brand: "",
@@ -38,6 +52,75 @@ export default function AddFoodPage() {
       setSelectedMeal(meal as MealType);
     }
   }, []);
+
+  useEffect(() => {
+    if (!scannerOpen) {
+      return;
+    }
+
+    let active = true;
+    let detector: InstanceType<BarcodeDetectorConstructor> | null = null;
+
+    async function openScanner() {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setScannerStatus("Camera is not available on this device. Use manual barcode entry.");
+        return;
+      }
+
+      if (!window.BarcodeDetector) {
+        setScannerStatus("Live barcode detection is not supported here. Use manual barcode entry for now.");
+        return;
+      }
+
+      try {
+        detector = new window.BarcodeDetector({ formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128"] });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" },
+          audio: false
+        });
+        streamRef.current = stream;
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+        }
+
+        setScannerStatus("Point the camera at the barcode.");
+        scanLoop();
+      } catch {
+        setScannerStatus("Camera permission was blocked or unavailable.");
+      }
+    }
+
+    async function scanLoop() {
+      if (!active || !detector || !videoRef.current) {
+        return;
+      }
+
+      try {
+        const barcodes = await detector.detect(videoRef.current);
+        const value = barcodes[0]?.rawValue;
+        if (value) {
+          active = false;
+          setBarcode(value);
+          closeScanner();
+          void lookupBarcode(value);
+          return;
+        }
+      } catch {
+        setScannerStatus("Could not read barcode yet. Try better light or enter it manually.");
+      }
+
+      window.setTimeout(scanLoop, 350);
+    }
+
+    openScanner();
+
+    return () => {
+      active = false;
+      stopCamera();
+    };
+  }, [scannerOpen]);
 
   const foods = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -81,14 +164,57 @@ export default function AddFoodPage() {
     setCustomFood({ name: "", brand: "", servingSize: "1", servingUnit: "serving", calories: "", protein: "", carbs: "", fat: "", sodium: "" });
   }
 
-  async function lookupBarcode() {
-    if (!barcode.trim()) {
+  function stopCamera() {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+  }
+
+  function closeScanner() {
+    stopCamera();
+    setScannerOpen(false);
+  }
+
+  async function startNativeScanner() {
+    setScannerStatus("Opening scanner...");
+    try {
+      const importer = new Function("specifier", "return import(specifier)") as (specifier: string) => Promise<{
+        BarcodeScanner: {
+          checkPermissions: () => Promise<{ camera: string }>;
+          requestPermissions: () => Promise<{ camera: string }>;
+          scan: (options?: unknown) => Promise<{ barcodes?: Array<{ rawValue?: string; displayValue?: string }> }>;
+        };
+      }>;
+      const { BarcodeScanner } = await importer("@capacitor-mlkit/barcode-scanning");
+      const permission = await BarcodeScanner.checkPermissions();
+      const finalPermission = permission.camera === "granted" ? permission : await BarcodeScanner.requestPermissions();
+
+      if (finalPermission.camera !== "granted") {
+        setScannerStatus("Camera permission is required to scan barcodes.");
+        return;
+      }
+
+      const result = await BarcodeScanner.scan();
+      const value = result.barcodes?.[0]?.rawValue ?? result.barcodes?.[0]?.displayValue;
+      if (value) {
+        setBarcode(value);
+        await lookupBarcode(value);
+        return;
+      }
+
+      setScannerStatus("No barcode found. Try again or enter it manually.");
+    } catch {
+      setScannerOpen(true);
+    }
+  }
+
+  async function lookupBarcode(value = barcode) {
+    if (!value.trim()) {
       return;
     }
 
     setBarcodeStatus("Searching barcode...");
     try {
-      const response = await fetch(`/api/barcode/${encodeURIComponent(barcode.trim())}`);
+      const response = await fetch(`/api/barcode/${encodeURIComponent(value.trim())}`);
       const data = await response.json();
       if (!response.ok || !data.food) {
         setBarcodeStatus("No complete product found. Create it as a custom food below.");
@@ -109,7 +235,7 @@ export default function AddFoodPage() {
           fiber: data.food.fiberG,
           sugar: data.food.sugarG,
           sodium: data.food.sodiumMg,
-          barcode: barcode.trim()
+          barcode: value.trim()
         },
         selectedMeal
       );
@@ -141,7 +267,7 @@ export default function AddFoodPage() {
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {quickActions.map((action) => (
-            <button key={action.label} className="rounded-[1.5rem] bg-white/10 p-4 text-left transition hover:bg-white/15">
+            <button key={action.label} onClick={() => action.label === "Barcode" && void startNativeScanner()} className="rounded-[1.5rem] bg-white/10 p-4 text-left transition hover:bg-white/15">
               <action.icon className="h-6 w-6 text-lime" />
               <p className="mt-4 font-black">{action.label}</p>
               <p className="mt-1 text-sm font-semibold text-white/55">{action.detail}</p>
@@ -163,10 +289,13 @@ export default function AddFoodPage() {
             <div className="mt-5 grid aspect-[4/3] place-items-center rounded-[1.5rem] border border-dashed border-ink/20 bg-field">
               <div className="text-center">
                 <ScanLine className="mx-auto h-10 w-10 text-ink/35" />
-                <p className="mt-3 text-sm font-black text-ink">Enter barcode</p>
+                <p className="mt-3 text-sm font-black text-ink">Scan or enter barcode</p>
+                <button onClick={startNativeScanner} className="mx-auto mt-3 rounded-2xl bg-lime px-4 py-3 text-sm font-black text-ink">
+                  Open camera
+                </button>
                 <div className="mx-auto mt-3 flex max-w-sm gap-2 px-4">
                   <input value={barcode} onChange={(event) => setBarcode(event.target.value)} inputMode="numeric" className="min-w-0 flex-1 rounded-2xl border border-ink/10 bg-white px-4 py-3 text-sm font-bold outline-none" placeholder="0123456789012" />
-                  <button onClick={lookupBarcode} className="rounded-2xl bg-ink px-4 py-3 text-sm font-black text-white">Find</button>
+                  <button onClick={() => void lookupBarcode()} className="rounded-2xl bg-ink px-4 py-3 text-sm font-black text-white">Find</button>
                 </div>
                 <p className="mt-2 text-xs font-semibold text-ink/45">{barcodeStatus || "Camera scanner SDK comes next."}</p>
               </div>
@@ -208,6 +337,24 @@ export default function AddFoodPage() {
           </div>
         </div>
       </section>
+
+      {scannerOpen && (
+        <div className="fixed inset-0 z-40 grid place-items-center bg-ink/90 p-4">
+          <div className="w-full max-w-md rounded-[2rem] bg-white p-4 shadow-soft">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-black text-ink">Scan barcode</h2>
+                <p className="text-sm font-semibold text-ink/45">{scannerStatus}</p>
+              </div>
+              <button onClick={closeScanner} className="grid h-10 w-10 place-items-center rounded-2xl bg-field text-ink" aria-label="Close scanner">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <video ref={videoRef} className="aspect-[3/4] w-full rounded-[1.5rem] bg-ink object-cover" playsInline muted />
+            <p className="mt-3 text-center text-xs font-semibold text-ink/45">If scanning does not start, enter the barcode manually.</p>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }

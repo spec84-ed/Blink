@@ -36,6 +36,13 @@ body {
   overscroll-behavior-y: contain;
 }
 
+[data-theme="dark"] body {
+  background:
+    radial-gradient(circle at top left, rgba(217, 242, 111, 0.1), transparent 34rem),
+    linear-gradient(180deg, #111713 0%, #17201b 100%);
+  color: #f7f8f3;
+}
+
 button,
 input,
 select {
@@ -57,4 +64,49 @@ textarea {
   background:
     radial-gradient(closest-side, white 74%, transparent 75% 100%),
     conic-gradient(var(--ring-color) calc(var(--value) * 1%), #e9ecdf 0);
+}
+
+[data-theme="dark"] .bg-white,
+[data-theme="dark"] .bg-field {
+  background-color: #202b25;
+}
+
+[data-theme="dark"] .bg-oat {
+  background-color: #2a3027;
+}
+
+[data-theme="dark"] .bg-ink {
+  background-color: #0d120f;
+}
+
+[data-theme="dark"] .text-ink {
+  color: #f7f8f3;
+}
+
+[data-theme="dark"] .text-ink\/70,
+[data-theme="dark"] .text-ink\/65,
+[data-theme="dark"] .text-ink\/60,
+[data-theme="dark"] .text-ink\/55,
+[data-theme="dark"] .text-ink\/50,
+[data-theme="dark"] .text-ink\/45,
+[data-theme="dark"] .text-ink\/40,
+[data-theme="dark"] .text-ink\/35 {
+  color: rgba(247, 248, 243, 0.62);
+}
+
+[data-theme="dark"] .border-ink\/10,
+[data-theme="dark"] .border-ink\/15,
+[data-theme="dark"] .border-ink\/20 {
+  border-color: rgba(247, 248, 243, 0.12);
+}
+
+[data-theme="dark"] input,
+[data-theme="dark"] select {
+  color: #f7f8f3;
+}
+
+[data-theme="dark"] .progress-ring {
+  background:
+    radial-gradient(closest-side, #202b25 74%, transparent 75% 100%),
+    conic-gradient(var(--ring-color) calc(var(--value) * 1%), #334036 0);
 }
