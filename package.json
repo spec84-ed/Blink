@@ -5,8 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "dev:wasm": "NEXT_TEST_WASM_DIR=node_modules/@next/swc-wasm-nodejs next dev",
-    "build": "next build --webpack",
-    "build:wasm": "NEXT_TEST_WASM_DIR=node_modules/@next/swc-wasm-nodejs next build --webpack",
+    "build": "prisma generate && next build --webpack",
+    "build:wasm": "prisma generate && NEXT_TEST_WASM_DIR=node_modules/@next/swc-wasm-nodejs next build --webpack",
     "start": "next start",
     "start:wasm": "NEXT_TEST_WASM_DIR=node_modules/@next/swc-wasm-nodejs next start",
     "lint": "next lint",
