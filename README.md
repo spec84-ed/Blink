@@ -29,7 +29,7 @@ npm install
 cp .env.example .env
 ```
 
-3. Set `DATABASE_URL`, `AUTH_SECRET`, and optionally `USDA_API_KEY`.
+3. Set `DATABASE_URL`, `AUTH_SECRET`, optionally `USDA_API_KEY`, and `OPEN_FOOD_FACTS_CONTACT_EMAIL` for the Open Food Facts User-Agent.
 
 4. Generate Prisma client and run migrations:
 

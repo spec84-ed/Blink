@@ -35,7 +35,8 @@ DATABASE_URL="your hosted postgres connection string"
 AUTH_SECRET="a long random secret"
 AUTH_URL="https://your-vercel-domain.vercel.app"
 NEXT_PUBLIC_APP_URL="https://blink-indol.vercel.app"
-USDA_API_KEY="optional for now"
+USDA_API_KEY="your USDA FoodData Central key"
+OPEN_FOOD_FACTS_CONTACT_EMAIL="your contact email for Open Food Facts User-Agent"
 ```
 
 ## Build Settings
@@ -60,3 +61,24 @@ npm run mobile:sync
 ```
 
 The native shell loads `NEXT_PUBLIC_APP_URL`. The local `capacitor-www/index.html` file is only an offline fallback so Capacitor has valid web assets during sync.
+
+## Food API Strategy
+
+Barcode lookups are cache-first:
+
+1. Check `BarcodeLookupCache` in PostgreSQL.
+2. Return cached complete products for up to 90 days.
+3. Return cached not-found/incomplete products for up to 7 days.
+4. Only call Open Food Facts on a cache miss.
+5. If Open Food Facts is missing nutrition data, try USDA branded search.
+6. Save the final result back into `BarcodeLookupCache`.
+
+This protects Open Food Facts rate limits and makes common barcode scans much faster.
+
+Open Food Facts does not require an API key for read-only barcode lookup. Nutrivue only sends a custom `User-Agent` in this format:
+
+```text
+BlinkAway/1.0 (contact: your-email@example.com)
+```
+
+USDA requests use `USDA_API_KEY`; Open Food Facts requests do not.

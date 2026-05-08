@@ -205,4 +205,7 @@ model BarcodeLookupCache {
   isComplete  Boolean  @default(false)
   lastChecked DateTime @default(now())
   createdAt   DateTime @default(now())
+
+  @@index([lastChecked])
+  @@index([source, isComplete])
 }
