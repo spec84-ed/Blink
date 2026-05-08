@@ -1,10 +1,46 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { ArrowRight, Check, Dumbbell } from "lucide-react";
+import { useNutrivueStore, type UserProfile } from "@/lib/app-store";
+import { estimateTargets } from "@/lib/nutrition";
 
 const steps = ["Profile", "Body", "Goals", "Preferences"];
 const preferences = ["High protein", "Vegetarian", "Gluten-free", "Low sodium", "Dairy-free"];
 
 export default function OnboardingPage() {
+  const router = useRouter();
+  const { state, ready, saveProfile } = useNutrivueStore();
+  const [profile, setProfile] = useState<UserProfile>(state.profile);
+  const estimated = estimateTargets(profile);
+
+  useEffect(() => {
+    if (ready) {
+      setProfile(state.profile);
+    }
+  }, [ready, state.profile]);
+
+  function update<K extends keyof UserProfile>(key: K, value: UserProfile[K]) {
+    setProfile((current) => ({ ...current, [key]: value }));
+  }
+
+  function togglePreference(pref: string) {
+    setProfile((current) => ({
+      ...current,
+      dietaryPreferences: current.dietaryPreferences.includes(pref)
+        ? current.dietaryPreferences.filter((item) => item !== pref)
+        : [...current.dietaryPreferences, pref]
+    }));
+  }
+
+  function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    saveProfile(profile);
+    router.push("/");
+  }
+
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-4 py-6 sm:px-6">
       <header className="flex items-center justify-between">
@@ -34,24 +70,35 @@ export default function OnboardingPage() {
           </div>
         </aside>
 
-        <form className="rounded-[2rem] border border-ink/10 bg-white p-5 shadow-card sm:p-7">
+        <form onSubmit={submit} className="rounded-[2rem] border border-ink/10 bg-white p-5 shadow-card sm:p-7">
           <div className="grid gap-4 sm:grid-cols-2">
-            {[
-              ["Name", "Maya"],
-              ["Age", "32"],
-              ["Height", "5 ft 8 in"],
-              ["Current weight", "178.6 lb"],
-              ["Goal weight", "172 lb"],
-              ["Preferred pace", "0.5 lb / week"]
-            ].map(([label, value]) => (
-              <label key={label} className="block">
-                <span className="text-sm font-black text-ink/55">{label}</span>
-                <input className="mt-2 w-full rounded-2xl border border-ink/10 bg-field px-4 py-3 font-bold text-ink outline-none focus:border-moss" defaultValue={value} />
-              </label>
-            ))}
+            <label className="block">
+              <span className="text-sm font-black text-ink/55">Name</span>
+              <input className="mt-2 w-full rounded-2xl border border-ink/10 bg-field px-4 py-3 font-bold text-ink outline-none focus:border-moss" value={profile.name} onChange={(event) => update("name", event.target.value)} />
+            </label>
+            <label className="block">
+              <span className="text-sm font-black text-ink/55">Age</span>
+              <input inputMode="numeric" className="mt-2 w-full rounded-2xl border border-ink/10 bg-field px-4 py-3 font-bold text-ink outline-none focus:border-moss" value={profile.age} onChange={(event) => update("age", Number(event.target.value) || 0)} />
+            </label>
+            <label className="block">
+              <span className="text-sm font-black text-ink/55">Height cm</span>
+              <input inputMode="decimal" className="mt-2 w-full rounded-2xl border border-ink/10 bg-field px-4 py-3 font-bold text-ink outline-none focus:border-moss" value={profile.heightCm} onChange={(event) => update("heightCm", Number(event.target.value) || 0)} />
+            </label>
+            <label className="block">
+              <span className="text-sm font-black text-ink/55">Current weight kg</span>
+              <input inputMode="decimal" className="mt-2 w-full rounded-2xl border border-ink/10 bg-field px-4 py-3 font-bold text-ink outline-none focus:border-moss" value={profile.weightKg} onChange={(event) => update("weightKg", Number(event.target.value) || 0)} />
+            </label>
+            <label className="block">
+              <span className="text-sm font-black text-ink/55">Goal weight kg</span>
+              <input inputMode="decimal" className="mt-2 w-full rounded-2xl border border-ink/10 bg-field px-4 py-3 font-bold text-ink outline-none focus:border-moss" value={profile.goalWeightKg} onChange={(event) => update("goalWeightKg", Number(event.target.value) || 0)} />
+            </label>
+            <label className="block">
+              <span className="text-sm font-black text-ink/55">Preferred pace kg / week</span>
+              <input inputMode="decimal" className="mt-2 w-full rounded-2xl border border-ink/10 bg-field px-4 py-3 font-bold text-ink outline-none focus:border-moss" value={profile.weeklyPaceKg} onChange={(event) => update("weeklyPaceKg", Number(event.target.value) || 0)} />
+            </label>
             <label className="block">
               <span className="text-sm font-black text-ink/55">Sex</span>
-              <select className="mt-2 w-full rounded-2xl border border-ink/10 bg-field px-4 py-3 font-bold text-ink outline-none focus:border-moss" defaultValue="female">
+              <select className="mt-2 w-full rounded-2xl border border-ink/10 bg-field px-4 py-3 font-bold text-ink outline-none focus:border-moss" value={profile.sex} onChange={(event) => update("sex", event.target.value as UserProfile["sex"])}>
                 <option value="female">Female</option>
                 <option value="male">Male</option>
                 <option value="non_binary">Non-binary</option>
@@ -60,7 +107,7 @@ export default function OnboardingPage() {
             </label>
             <label className="block">
               <span className="text-sm font-black text-ink/55">Activity level</span>
-              <select className="mt-2 w-full rounded-2xl border border-ink/10 bg-field px-4 py-3 font-bold text-ink outline-none focus:border-moss" defaultValue="moderate">
+              <select className="mt-2 w-full rounded-2xl border border-ink/10 bg-field px-4 py-3 font-bold text-ink outline-none focus:border-moss" value={profile.activityLevel} onChange={(event) => update("activityLevel", event.target.value as UserProfile["activityLevel"])}>
                 <option value="sedentary">Sedentary</option>
                 <option value="light">Light</option>
                 <option value="moderate">Moderate</option>
@@ -73,9 +120,13 @@ export default function OnboardingPage() {
           <div className="mt-5">
             <p className="text-sm font-black text-ink/55">Goal</p>
             <div className="mt-2 grid gap-3 sm:grid-cols-3">
-              {["Lose weight", "Maintain", "Gain weight"].map((goal) => (
-                <button key={goal} type="button" className="rounded-2xl border border-ink/10 bg-field px-4 py-3 text-sm font-black text-ink hover:border-moss">
-                  {goal}
+              {[
+                ["lose", "Lose weight"],
+                ["maintain", "Maintain"],
+                ["gain", "Gain weight"]
+              ].map(([value, label]) => (
+                <button key={value} type="button" onClick={() => update("goal", value as UserProfile["goal"])} className={`rounded-2xl border px-4 py-3 text-sm font-black ${profile.goal === value ? "border-ink bg-lime text-ink" : "border-ink/10 bg-field text-ink"}`}>
+                  {label}
                 </button>
               ))}
             </div>
@@ -85,7 +136,7 @@ export default function OnboardingPage() {
             <p className="text-sm font-black text-ink/55">Dietary preferences</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {preferences.map((pref) => (
-                <button key={pref} type="button" className="rounded-full border border-ink/10 bg-white px-4 py-2 text-sm font-bold text-ink/65 hover:bg-lime hover:text-ink">
+                <button key={pref} type="button" onClick={() => togglePreference(pref)} className={`rounded-full border px-4 py-2 text-sm font-bold hover:bg-lime hover:text-ink ${profile.dietaryPreferences.includes(pref) ? "border-ink bg-lime text-ink" : "border-ink/10 bg-white text-ink/65"}`}>
                   {pref}
                 </button>
               ))}
@@ -95,7 +146,7 @@ export default function OnboardingPage() {
           <div className="mt-7 rounded-[1.5rem] bg-field p-4">
             <p className="text-sm font-black text-ink/55">Estimated targets</p>
             <div className="mt-3 grid grid-cols-4 gap-2 text-center">
-              {["2240 cal", "150g P", "245g C", "72g F"].map((item) => (
+              {[`${estimated.dailyCalories} cal`, `${estimated.protein}g P`, `${estimated.carbs}g C`, `${estimated.fat}g F`].map((item) => (
                 <div key={item} className="rounded-2xl bg-white p-3 text-sm font-black text-ink">{item}</div>
               ))}
             </div>

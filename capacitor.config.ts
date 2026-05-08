@@ -1,12 +1,12 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 import { KeyboardResize } from "@capacitor/keyboard";
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://blink-indol.vercel.app";
 
 const config: CapacitorConfig = {
   appId: "com.nutrivue.app",
   appName: "Nutrivue",
-  webDir: ".next",
+  webDir: "capacitor-www",
   server: appUrl
     ? {
         url: appUrl,

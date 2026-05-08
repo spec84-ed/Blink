@@ -34,7 +34,7 @@ Set these in the Vercel project settings:
 DATABASE_URL="your hosted postgres connection string"
 AUTH_SECRET="a long random secret"
 AUTH_URL="https://your-vercel-domain.vercel.app"
-NEXT_PUBLIC_APP_URL="https://your-vercel-domain.vercel.app"
+NEXT_PUBLIC_APP_URL="https://blink-indol.vercel.app"
 USDA_API_KEY="optional for now"
 ```
 
@@ -54,7 +54,9 @@ Node version: 22
 Use the deployed URL for the iOS and Android wrapper:
 
 ```bash
-NEXT_PUBLIC_APP_URL="https://your-vercel-domain.vercel.app"
+NEXT_PUBLIC_APP_URL="https://blink-indol.vercel.app"
 npm run mobile:init
 npm run mobile:sync
 ```
+
+The native shell loads `NEXT_PUBLIC_APP_URL`. The local `capacitor-www/index.html` file is only an offline fallback so Capacitor has valid web assets during sync.

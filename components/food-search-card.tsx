@@ -6,13 +6,15 @@ export function FoodSearchCard({
   source,
   calories,
   protein,
-  icon: Icon
+  icon: Icon,
+  onAdd
 }: {
   name: string;
   source: string;
   calories: number;
   protein: number;
   icon: LucideIcon;
+  onAdd?: () => void;
 }) {
   return (
     <article className="flex items-center justify-between gap-3 rounded-[1.5rem] border border-ink/10 bg-white p-4 shadow-card">
@@ -27,7 +29,7 @@ export function FoodSearchCard({
           </p>
         </div>
       </div>
-      <button className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-ink text-white" aria-label={`Add ${name}`}>
+      <button onClick={onAdd} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-ink text-white" aria-label={`Add ${name}`}>
         <Plus className="h-5 w-5" />
       </button>
     </article>
