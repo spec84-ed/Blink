@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  min-height: 100%;
+  background: #fbfcf7;
+  overscroll-behavior: none;
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100%;
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+  background:
+    radial-gradient(circle at top left, rgba(217, 242, 111, 0.26), transparent 34rem),
+    linear-gradient(180deg, #fbfcf7 0%, #f5f6ef 100%);
+  color: #17201b;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  overscroll-behavior-y: contain;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button,
+a {
+  touch-action: manipulation;
+}
+
+input,
+select,
+textarea {
+  font-size: 16px;
+}
+
+.progress-ring {
+  background:
+    radial-gradient(closest-side, white 74%, transparent 75% 100%),
+    conic-gradient(var(--ring-color) calc(var(--value) * 1%), #e9ecdf 0);
+}

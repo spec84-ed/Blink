@@ -1,0 +1,208 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Sex {
+  FEMALE
+  MALE
+  NON_BINARY
+  PREFER_NOT_TO_SAY
+}
+
+enum ActivityLevel {
+  SEDENTARY
+  LIGHT
+  MODERATE
+  ACTIVE
+  VERY_ACTIVE
+}
+
+enum WeightGoal {
+  LOSE
+  MAINTAIN
+  GAIN
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACKS
+}
+
+enum FoodSource {
+  USDA
+  OPEN_FOOD_FACTS
+  CUSTOM
+  SAVED_MEAL
+}
+
+model User {
+  id            String          @id @default(cuid())
+  email         String?         @unique
+  name          String?
+  image         String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  profile       UserProfile?
+  dailyLogs     DailyLog[]
+  foods         Food[]
+  meals         Meal[]
+  savedMeals    SavedMeal[]
+  weightEntries WeightEntry[]
+  waterEntries  WaterEntry[]
+}
+
+model UserProfile {
+  id                  String        @id @default(cuid())
+  userId              String        @unique
+  age                 Int?
+  sex                 Sex?
+  heightCm            Decimal?      @db.Decimal(6, 2)
+  weightKg            Decimal?      @db.Decimal(6, 2)
+  goalWeightKg        Decimal?      @db.Decimal(6, 2)
+  activityLevel       ActivityLevel @default(MODERATE)
+  goal                WeightGoal    @default(MAINTAIN)
+  weeklyPaceKg        Decimal?      @db.Decimal(4, 2)
+  dietaryPreferences  String[]      @default([])
+  dailyCaloriesTarget Int?
+  proteinTargetG      Decimal?      @db.Decimal(6, 2)
+  carbsTargetG        Decimal?      @db.Decimal(6, 2)
+  fatTargetG          Decimal?      @db.Decimal(6, 2)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  user                User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model DailyLog {
+  id          String      @id @default(cuid())
+  userId      String
+  date        DateTime
+  notes       String?
+  foodEntries FoodEntry[]
+  meals       Meal[]
+  water       WaterEntry[]
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+model Food {
+  id                String      @id @default(cuid())
+  ownerId           String?
+  source            FoodSource
+  sourceId          String?
+  barcode           String?
+  name              String
+  brand             String?
+  servingSize       Decimal     @db.Decimal(8, 2)
+  servingUnit       String
+  calories          Int
+  proteinG          Decimal     @db.Decimal(7, 2)
+  carbsG            Decimal     @db.Decimal(7, 2)
+  fatG              Decimal     @db.Decimal(7, 2)
+  fiberG            Decimal?    @db.Decimal(7, 2)
+  sugarG            Decimal?    @db.Decimal(7, 2)
+  sodiumMg          Decimal?    @db.Decimal(9, 2)
+  micronutrients    Json?
+  lastUsedAt        DateTime?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  owner             User?       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  entries           FoodEntry[]
+  savedMealItems    SavedMealItem[]
+
+  @@index([name])
+  @@index([barcode])
+  @@index([ownerId, lastUsedAt])
+}
+
+model FoodEntry {
+  id          String    @id @default(cuid())
+  dailyLogId  String
+  foodId      String
+  mealType    MealType
+  quantity    Decimal   @default(1) @db.Decimal(8, 2)
+  servingText String?
+  loggedAt    DateTime  @default(now())
+  dailyLog    DailyLog  @relation(fields: [dailyLogId], references: [id], onDelete: Cascade)
+  food        Food      @relation(fields: [foodId], references: [id])
+
+  @@index([dailyLogId, mealType])
+}
+
+model Meal {
+  id         String    @id @default(cuid())
+  userId     String
+  dailyLogId String?
+  type       MealType
+  name       String?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dailyLog   DailyLog? @relation(fields: [dailyLogId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+}
+
+model SavedMeal {
+  id          String          @id @default(cuid())
+  userId      String
+  name        String
+  description String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items       SavedMealItem[]
+
+  @@index([userId, name])
+}
+
+model SavedMealItem {
+  id          String    @id @default(cuid())
+  savedMealId String
+  foodId      String
+  quantity    Decimal   @default(1) @db.Decimal(8, 2)
+  savedMeal   SavedMeal @relation(fields: [savedMealId], references: [id], onDelete: Cascade)
+  food        Food      @relation(fields: [foodId], references: [id])
+}
+
+model WeightEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  date      DateTime
+  weightKg  Decimal  @db.Decimal(6, 2)
+  note      String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+}
+
+model WaterEntry {
+  id        String    @id @default(cuid())
+  userId    String
+  dailyLogId String?
+  amountMl  Int
+  loggedAt  DateTime  @default(now())
+  dailyLog  DailyLog? @relation(fields: [dailyLogId], references: [id], onDelete: SetNull)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, loggedAt])
+}
+
+model BarcodeLookupCache {
+  id          String   @id @default(cuid())
+  barcode     String   @unique
+  source      FoodSource
+  sourceId    String?
+  payload     Json
+  isComplete  Boolean  @default(false)
+  lastChecked DateTime @default(now())
+  createdAt   DateTime @default(now())
+}
